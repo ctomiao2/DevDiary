@@ -1,0 +1,49 @@
+2018.09.01 广州 大雨
+
+	昨个晚上心血来潮觉得用一个屏幕实在不方便，刚好还有台显示屏就想弄个双屏来，结果用linux默认的显卡驱动就是投不了屏，于是就想装个
+Nvidia显卡驱动试试，是在ubuntu的设置界面装的，装完可坏了，使用各种模式就是进不了gui界面鸟，无奈百度各种方案，折腾了两个晚上终于搞好。记录下恢复过程免得日后
+出现类似事情。
+    1. 启动后按Ctrl+ALT+F1进入命令模式, lshw -c video查看当前装的是什么驱动(在configuration: driver=xxx), 显示是nvidia，估计是装的
+	   版本有问题，先全卸载；
+	2. 卸载nvidia显卡驱动：
+	   sudo apt-get purge nvidia-*
+	3. 把显卡驱动加入ppa: 
+	   sudo add-apt-repository ppa:graphics-drivers
+	   sudo apt-get update
+	4. 查找并安装最新驱动：
+	   sudo apt-cache search nvidia
+	5. 选择上一步中最新版本显卡驱动安装(如nvidia-396)：
+	   sudo apt-get install nvidia-396
+	6. reboot重启后即可进入了
+
+	注意：安装驱动过程需要联网，关于命令行连接wifi：
+		a) iwconfig 列出所有网卡
+		b) 启动无线网卡, 其中wlan0是a)中列出的无线网卡编号
+			sudo ip link set wlan0 up 
+		c) 扫描所检测到的无线网络：
+			sudo iw dev wlan0 scan | less
+		d) 找到你要连的wifi，记住ssid，如果是开放没加密的：
+				sudo iw dev wlan0 connect [网络ssid]
+		   如果是比较低级的协议WEP加密的：
+				sudo iw dev wlan0 connect [网络ssid] key 0:[WEP密钥]
+		   如果是WPA或者WPA2协议则需要安装wpasupplicant工具：
+				sudo apt install wpasupplicant
+		   安装成功后创建wpa_supplicant.conf并写入以下内容：
+				sudo vim /etc/wpasupplicant/wpa_supplicant.conf 
+				
+				ctrl_interface=/var/run/wpa_supplicant
+				ap_scan=1
+				network={
+					ssid="[Your SSID name]"
+					psk="[Your wifi password]"
+					priority=1
+				}
+		e) 启动连接wifi命令：
+			sudo wpa_supplicant -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf &
+		f) 获取ip地址：
+			sudo dhclient wlan0 
+		g) 检查是否连接成功，可用iwconfig查看无线网卡是否连上你的wifi或者使用ping命令，可能会碰到能ping通ip地址
+		   但是ping不通域名，原因是dns解析出问题了，这种情况同样是更新不了驱动的。解决办法是在/etc/resolv.conf里加上
+		   本地dns host：servername 8.8.8.8 保存退出然后就可以欢快地更新或下载了
+
+
